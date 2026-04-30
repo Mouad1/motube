@@ -12,7 +12,8 @@
     "dashboard": "cd dashboard && npm run dev",
     "dashboard:build": "cd dashboard && npm run build",
     "workers": "npx tsx pipeline/workers.ts",
-    "db:init": "npx tsx pipeline/lib/db.ts"
+    "db:init": "npx tsx pipeline/lib/db.ts",
+    "phase0:smoke": "FAL_DRY_RUN=1 KLING_DRY_RUN=1 MOTUBE_COST_LOG=1 npx tsx pipeline/character-service/smoke-test.ts"
   },
   "keywords": [],
   "author": "",

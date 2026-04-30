@@ -88,11 +88,78 @@ function migrate(db: Database.Database) {
       is_default     INTEGER DEFAULT 0,
       created_at     TEXT NOT NULL DEFAULT (datetime('now'))
     );
+
+    -- ─── Character-driven pipeline (Phase 0) ─────────────────────────────────
+
+    CREATE TABLE IF NOT EXISTS characters (
+      id              TEXT PRIMARY KEY,
+      slug            TEXT UNIQUE NOT NULL,
+      name            TEXT NOT NULL,
+      description     TEXT,
+      style_prompt    TEXT NOT NULL,
+      negative_prompt TEXT,
+      base_seed       INTEGER NOT NULL,
+      image_provider  TEXT NOT NULL DEFAULT 'fal-flux',
+      video_provider  TEXT NOT NULL DEFAULT 'kling',
+      lora_ref        TEXT,
+      version         INTEGER NOT NULL DEFAULT 1,
+      status          TEXT NOT NULL DEFAULT 'draft',
+      created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS character_sheets (
+      id            TEXT PRIMARY KEY,
+      character_id  TEXT NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
+      kind          TEXT NOT NULL,
+      image_path    TEXT NOT NULL,
+      prompt_used   TEXT NOT NULL,
+      seed_used     INTEGER NOT NULL,
+      version       INTEGER NOT NULL DEFAULT 1,
+      created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_character_sheets_char ON character_sheets(character_id);
+
+    CREATE TABLE IF NOT EXISTS story_templates (
+      id              TEXT PRIMARY KEY,
+      slug            TEXT UNIQUE NOT NULL,
+      name            TEXT NOT NULL,
+      description     TEXT,
+      structure_json  TEXT NOT NULL,
+      language        TEXT NOT NULL DEFAULT 'en',
+      format          TEXT NOT NULL DEFAULT '16:9',
+      created_at      TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS clips (
+      id                  TEXT PRIMARY KEY,
+      episode_id          TEXT NOT NULL REFERENCES episodes(id) ON DELETE CASCADE,
+      scene_index         INTEGER NOT NULL,
+      character_ids_json  TEXT NOT NULL DEFAULT '[]',
+      image_prompt        TEXT NOT NULL,
+      motion_prompt       TEXT,
+      duration_ms         INTEGER NOT NULL,
+      audio_segment_path  TEXT,
+      image_path          TEXT,
+      video_path          TEXT,
+      image_provider      TEXT,
+      video_provider      TEXT,
+      status              TEXT NOT NULL DEFAULT 'pending',
+      error               TEXT,
+      cost_usd            REAL NOT NULL DEFAULT 0,
+      created_at          TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at          TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_clips_episode ON clips(episode_id);
+    CREATE INDEX IF NOT EXISTS idx_clips_status  ON clips(status);
   `);
 
   // Additive migrations — safe to run multiple times
   try { db.exec("ALTER TABLE episodes ADD COLUMN render_progress INTEGER DEFAULT NULL"); } catch { /* already exists */ }
   try { db.exec("ALTER TABLE episodes ADD COLUMN heygen_video_ids TEXT DEFAULT NULL"); } catch { /* already exists */ }
+  try { db.exec("ALTER TABLE episodes ADD COLUMN story_template_id TEXT DEFAULT NULL"); } catch { /* already exists */ }
+  try { db.exec("ALTER TABLE episodes ADD COLUMN character_cast_json TEXT DEFAULT NULL"); } catch { /* already exists */ }
+  try { db.exec("ALTER TABLE episodes ADD COLUMN assembly_method TEXT DEFAULT NULL"); } catch { /* already exists */ }
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -255,4 +322,179 @@ export const db = {
       getDb().prepare(`UPDATE publications SET ${set} WHERE id = @id`).run({ id, ...Object.fromEntries(entries) });
     },
   },
+
+  characters: {
+    list(): Character[] {
+      return getDb().prepare("SELECT * FROM characters ORDER BY created_at DESC").all() as Character[];
+    },
+    get(id: string): Character | null {
+      return (getDb().prepare("SELECT * FROM characters WHERE id = ?").get(id) as Character) ?? null;
+    },
+    getBySlug(slug: string): Character | null {
+      return (getDb().prepare("SELECT * FROM characters WHERE slug = ?").get(slug) as Character) ?? null;
+    },
+    create(row: Omit<Character, "created_at" | "updated_at">): void {
+      getDb().prepare(`
+        INSERT INTO characters (id, slug, name, description, style_prompt, negative_prompt,
+          base_seed, image_provider, video_provider, lora_ref, version, status)
+        VALUES (@id, @slug, @name, @description, @style_prompt, @negative_prompt,
+          @base_seed, @image_provider, @video_provider, @lora_ref, @version, @status)
+      `).run(row);
+    },
+    update(id: string, fields: Partial<Character>): void {
+      const entries = Object.entries({ ...fields, updated_at: new Date().toISOString() })
+        .filter(([k]) => k !== "id");
+      const set = entries.map(([k]) => `${k} = @${k}`).join(", ");
+      getDb().prepare(`UPDATE characters SET ${set} WHERE id = @id`).run({ id, ...Object.fromEntries(entries) });
+    },
+    delete(id: string): void {
+      getDb().prepare("DELETE FROM characters WHERE id = ?").run(id);
+    },
+  },
+
+  characterSheets: {
+    listByCharacter(characterId: string): CharacterSheet[] {
+      return getDb()
+        .prepare("SELECT * FROM character_sheets WHERE character_id = ? ORDER BY created_at ASC")
+        .all(characterId) as CharacterSheet[];
+    },
+    create(row: Omit<CharacterSheet, "created_at">): void {
+      getDb().prepare(`
+        INSERT INTO character_sheets (id, character_id, kind, image_path, prompt_used, seed_used, version)
+        VALUES (@id, @character_id, @kind, @image_path, @prompt_used, @seed_used, @version)
+      `).run(row);
+    },
+    deleteByCharacter(characterId: string): void {
+      getDb().prepare("DELETE FROM character_sheets WHERE character_id = ?").run(characterId);
+    },
+  },
+
+  storyTemplates: {
+    list(): StoryTemplate[] {
+      return getDb().prepare("SELECT * FROM story_templates ORDER BY created_at DESC").all() as StoryTemplate[];
+    },
+    get(id: string): StoryTemplate | null {
+      return (getDb().prepare("SELECT * FROM story_templates WHERE id = ?").get(id) as StoryTemplate) ?? null;
+    },
+    create(row: Omit<StoryTemplate, "created_at">): void {
+      getDb().prepare(`
+        INSERT INTO story_templates (id, slug, name, description, structure_json, language, format)
+        VALUES (@id, @slug, @name, @description, @structure_json, @language, @format)
+      `).run(row);
+    },
+  },
+
+  clips: {
+    listByEpisode(episodeId: string): Clip[] {
+      return getDb()
+        .prepare("SELECT * FROM clips WHERE episode_id = ? ORDER BY scene_index ASC")
+        .all(episodeId) as Clip[];
+    },
+    get(id: string): Clip | null {
+      return (getDb().prepare("SELECT * FROM clips WHERE id = ?").get(id) as Clip) ?? null;
+    },
+    create(row: Omit<Clip, "created_at" | "updated_at">): void {
+      getDb().prepare(`
+        INSERT INTO clips (id, episode_id, scene_index, character_ids_json, image_prompt,
+          motion_prompt, duration_ms, audio_segment_path, image_path, video_path,
+          image_provider, video_provider, status, error, cost_usd)
+        VALUES (@id, @episode_id, @scene_index, @character_ids_json, @image_prompt,
+          @motion_prompt, @duration_ms, @audio_segment_path, @image_path, @video_path,
+          @image_provider, @video_provider, @status, @error, @cost_usd)
+      `).run(row);
+    },
+    update(id: string, fields: Partial<Clip>): void {
+      const entries = Object.entries({ ...fields, updated_at: new Date().toISOString() })
+        .filter(([k]) => k !== "id");
+      const set = entries.map(([k]) => `${k} = @${k}`).join(", ");
+      getDb().prepare(`UPDATE clips SET ${set} WHERE id = @id`).run({ id, ...Object.fromEntries(entries) });
+    },
+    addCost(id: string, deltaUsd: number): void {
+      getDb()
+        .prepare("UPDATE clips SET cost_usd = cost_usd + ?, updated_at = datetime('now') WHERE id = ?")
+        .run(deltaUsd, id);
+    },
+  },
 };
+
+// ─── Phase 0 entity types ─────────────────────────────────────────────────────
+
+export type CharacterStatus = "draft" | "sheet_pending" | "ready" | "failed";
+
+export interface Character {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  style_prompt: string;
+  negative_prompt: string | null;
+  base_seed: number;
+  image_provider: string;
+  video_provider: string;
+  lora_ref: string | null;
+  version: number;
+  status: CharacterStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export type CharacterSheetKind =
+  | "front"
+  | "side"
+  | "three_quarter"
+  | "expression_neutral"
+  | "expression_happy"
+  | "expression_sad"
+  | "expression_angry"
+  | "expression_surprised"
+  | "pose_idle"
+  | "pose_walk"
+  | "pose_run";
+
+export interface CharacterSheet {
+  id: string;
+  character_id: string;
+  kind: CharacterSheetKind;
+  image_path: string;
+  prompt_used: string;
+  seed_used: number;
+  version: number;
+  created_at: string;
+}
+
+export interface StoryTemplate {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  structure_json: string;
+  language: string;
+  format: string;
+  created_at: string;
+}
+
+export type ClipStatus =
+  | "pending"
+  | "image_ready"
+  | "video_ready"
+  | "failed";
+
+export interface Clip {
+  id: string;
+  episode_id: string;
+  scene_index: number;
+  character_ids_json: string;
+  image_prompt: string;
+  motion_prompt: string | null;
+  duration_ms: number;
+  audio_segment_path: string | null;
+  image_path: string | null;
+  video_path: string | null;
+  image_provider: string | null;
+  video_provider: string | null;
+  status: ClipStatus;
+  error: string | null;
+  cost_usd: number;
+  created_at: string;
+  updated_at: string;
+}

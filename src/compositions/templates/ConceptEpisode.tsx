@@ -30,6 +30,7 @@ export interface ConceptEpisodeProps {
   motionEvents: MotionEvent[];
   lang: "fr" | "en" | "ar" | "es";
   title?: string;
+  [key: string]: unknown;
 }
 
 // ─── calculateMetadata ────────────────────────────────────────────────────────

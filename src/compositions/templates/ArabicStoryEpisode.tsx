@@ -29,6 +29,7 @@ export interface ArabicEpisodeProps {
   title: string;
   language?: string;
   scenes: Array<ArabicSceneType & { durationInFrames?: number }>;
+  [key: string]: unknown;
 }
 
 const DEFAULT_DURATIONS: Record<ArabicSceneType["type"], number> = {

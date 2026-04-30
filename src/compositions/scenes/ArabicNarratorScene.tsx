@@ -1,3 +1,4 @@
+import React from "react";
 import {
   AbsoluteFill,
   Audio,
@@ -8,6 +9,7 @@ import {
   useVideoConfig,
 } from "remotion";
 import { Lottie } from "@remotion/lottie";
+import type { LottieAnimationData } from "@remotion/lottie";
 
 interface ArabicNarratorSceneProps {
   arabicText: string;
@@ -45,13 +47,13 @@ export const ArabicNarratorScene: React.FC<ArabicNarratorSceneProps> = ({
   const combinedOpacity = Math.min(panelOpacity, fadeOut);
 
   // Lottie animation data (loaded inline if provided)
-  const [lottieData, setLottieData] = React.useState<object | null>(null);
+  const [lottieData, setLottieData] = React.useState<LottieAnimationData | null>(null);
 
   React.useEffect(() => {
     if (!lottieSrc) return;
     fetch(lottieSrc)
       .then((r) => r.json())
-      .then(setLottieData)
+      .then((data: LottieAnimationData) => setLottieData(data))
       .catch(() => setLottieData(null));
   }, [lottieSrc]);
 

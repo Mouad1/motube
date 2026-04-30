@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, BarChart3 } from "lucide-react";
+import { LayoutDashboard, BarChart3, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/characters", label: "Characters", icon: Users },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
 ];
 

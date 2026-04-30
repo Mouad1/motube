@@ -19,6 +19,10 @@ export const QUEUE_NAMES = {
   RENDER: "render-queue",
   TTS: "tts-queue",
   PUBLISH: "publish-queue",
+  CHARACTER_SHEET: "character-sheet-queue",
+  IMAGE_GEN: "image-gen-queue",
+  VIDEO_GEN: "video-gen-queue",
+  ASSEMBLE: "assemble-queue",
 } as const;
 
 // ─── Job data types ───────────────────────────────────────────────────────────
@@ -46,6 +50,28 @@ export interface PublishJobData {
     tags: string[];
     privacyStatus?: "public" | "private" | "unlisted";
   };
+}
+
+// ─── Character-driven pipeline (Phase 0) ──────────────────────────────────────
+
+export interface CharacterSheetJobData {
+  characterId: string;
+  /** If empty, the worker generates the default sheet kinds. */
+  kinds?: string[];
+}
+
+export interface ImageGenJobData {
+  clipId: string;
+}
+
+export interface VideoGenJobData {
+  clipId: string;
+}
+
+export interface AssembleJobData {
+  episodeId: string;
+  /** "ffmpeg" for direct concat, "remotion" for overlay-aware composition. */
+  method: "ffmpeg" | "remotion";
 }
 
 // ─── Queue factories ──────────────────────────────────────────────────────────
@@ -82,6 +108,54 @@ export function createPublishQueue() {
       backoff: { type: "fixed", delay: 10000 },
       removeOnComplete: { count: 100 },
       removeOnFail: { count: 50 },
+    },
+  });
+}
+
+export function createCharacterSheetQueue() {
+  return new Queue<CharacterSheetJobData>(QUEUE_NAMES.CHARACTER_SHEET, {
+    connection: createRedisConnection(),
+    defaultJobOptions: {
+      attempts: 2,
+      backoff: { type: "exponential", delay: 5000 },
+      removeOnComplete: { count: 50 },
+      removeOnFail: { count: 20 },
+    },
+  });
+}
+
+export function createImageGenQueue() {
+  return new Queue<ImageGenJobData>(QUEUE_NAMES.IMAGE_GEN, {
+    connection: createRedisConnection(),
+    defaultJobOptions: {
+      attempts: 3,
+      backoff: { type: "exponential", delay: 3000 },
+      removeOnComplete: { count: 100 },
+      removeOnFail: { count: 50 },
+    },
+  });
+}
+
+export function createVideoGenQueue() {
+  return new Queue<VideoGenJobData>(QUEUE_NAMES.VIDEO_GEN, {
+    connection: createRedisConnection(),
+    defaultJobOptions: {
+      attempts: 2,
+      backoff: { type: "exponential", delay: 10000 },
+      removeOnComplete: { count: 100 },
+      removeOnFail: { count: 50 },
+    },
+  });
+}
+
+export function createAssembleQueue() {
+  return new Queue<AssembleJobData>(QUEUE_NAMES.ASSEMBLE, {
+    connection: createRedisConnection(),
+    defaultJobOptions: {
+      attempts: 2,
+      backoff: { type: "fixed", delay: 5000 },
+      removeOnComplete: { count: 50 },
+      removeOnFail: { count: 20 },
     },
   });
 }

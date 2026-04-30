@@ -27,6 +27,7 @@ data/
 # generated assets
 assets/audio/
 assets/images/
+assets/videos/
 assets/heygen/
 
 # logs

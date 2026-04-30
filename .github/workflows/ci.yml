@@ -88,24 +88,7 @@ jobs:
       - name: Create sample episode DB
         run: |
           mkdir -p data output
-          node -e "
-          import('./pipeline/lib/db.js').then(({ db }) => {
-            const ep = db.episodes.create({
-              title: 'CI Sample Episode',
-              template: 'karpathy',
-            });
-            const props = {
-              title: 'CI Sample Episode',
-              scenes: [
-                { type: 'title', data: { title: 'CI Sample', subtitle: 'Automated test render' }, durationInFrames: 60 },
-                { type: 'transition', data: { text: 'Pipeline verified.' }, durationInFrames: 45 }
-              ]
-            };
-            db.episodes.update(ep.id, { props_json: JSON.stringify(props), status: 'scripted' });
-            console.log(ep.id);
-          });
-          " > /tmp/episode-id.txt
-          EPISODE_ID=$(cat /tmp/episode-id.txt | tail -1)
+          EPISODE_ID=$(npx tsx pipeline/scripts/ci-sample-episode.ts | tail -1)
           echo "EPISODE_ID=$EPISODE_ID" >> $GITHUB_ENV
 
       - name: Render sample (preview quality)

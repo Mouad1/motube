@@ -46,6 +46,7 @@ export type SceneType =
 export interface EpisodeProps {
   title: string;
   scenes: Array<SceneType & { durationInFrames?: number }>;
+  [key: string]: unknown;
 }
 
 const DEFAULT_DURATIONS: Record<SceneType["type"], number> = {

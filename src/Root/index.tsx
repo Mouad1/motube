@@ -1,3 +1,4 @@
+import React from "react";
 import { Composition, registerRoot } from "remotion";
 import { KarpathyEpisode, calculateMetadata as karpathyMeta } from "../compositions/templates/KarpathyEpisode";
 import type { EpisodeProps } from "../compositions/templates/KarpathyEpisode";

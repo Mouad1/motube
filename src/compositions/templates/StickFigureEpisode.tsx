@@ -42,6 +42,7 @@ export interface StickFigureEpisodeProps {
     antagonist: CharacterConfig;
   };
   scenes: DialogueScene[];
+  [key: string]: unknown;
 }
 
 // ─── calculateMetadata ────────────────────────────────────────────────────────

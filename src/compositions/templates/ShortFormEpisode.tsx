@@ -11,6 +11,7 @@ export interface ShortFormProps {
   language?: string;
   channelHandle?: string;
   scenes: Array<ShortSceneType & { durationInFrames?: number }>;
+  [key: string]: unknown;
 }
 
 const DEFAULT_DURATIONS: Record<ShortSceneType["type"], number> = {

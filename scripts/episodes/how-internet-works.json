@@ -1,0 +1,103 @@
+{
+  "title": "How the Internet Works",
+  "template": "karpathy",
+  "description": "Pilot episode — approachable, visual-first explainer on Internet fundamentals. 7 scenes, ~90s at default durations.",
+  "version": "1.0",
+  "scenes": [
+    {
+      "type": "title",
+      "durationInFrames": 150,
+      "data": {
+        "title": "How the Internet Works",
+        "subtitle": "From your keyboard to the world",
+        "narration": "Every time you open a website, send a message, or stream a video, a small miracle of engineering happens in milliseconds. Let's break it down."
+      }
+    },
+    {
+      "type": "bullet_points",
+      "durationInFrames": 300,
+      "data": {
+        "heading": "The Internet in 5 ideas",
+        "bullets": [
+          { "text": "Packets — data is split into small chunks", "icon": "📦" },
+          { "text": "IP addresses — every device has a unique number", "icon": "🔢" },
+          { "text": "Routers — traffic directors of the Internet", "icon": "🗺️" },
+          { "text": "DNS — the phone book that translates names to IPs", "icon": "📖" },
+          { "text": "TCP/IP — the rules that make it reliable", "icon": "📜" }
+        ],
+        "narration": "The Internet is built on five simple ideas. Master these, and the rest falls into place."
+      }
+    },
+    {
+      "type": "diagram",
+      "durationInFrames": 360,
+      "data": {
+        "heading": "A request travels the world",
+        "nodes": [
+          { "id": "browser", "label": "Your Browser", "x": 10, "y": 50, "color": "#6ee7b7" },
+          { "id": "router", "label": "Your Router", "x": 30, "y": 50, "color": "#60a5fa" },
+          { "id": "isp", "label": "ISP", "x": 50, "y": 50, "color": "#f59e0b" },
+          { "id": "dns", "label": "DNS Server", "x": 50, "y": 20, "color": "#a78bfa" },
+          { "id": "server", "label": "Web Server", "x": 90, "y": 50, "color": "#f87171" }
+        ],
+        "edges": [
+          { "from": "browser", "to": "router", "label": "local" },
+          { "from": "router", "to": "isp", "label": "fiber/cable" },
+          { "from": "isp", "to": "dns", "label": "lookup" },
+          { "from": "isp", "to": "server", "label": "packets" }
+        ],
+        "caption": "Each hop adds ~1-10ms. London to New York: ~80ms.",
+        "narration": "When you type a URL, your request jumps through several hops before reaching its destination. Each hop is handled by a specialized piece of infrastructure."
+      }
+    },
+    {
+      "type": "concept",
+      "durationInFrames": 240,
+      "data": {
+        "heading": "Packets: the postal system of data",
+        "body": "Your browser doesn't send one big blob. It breaks data into packets of ~1500 bytes each — numbered, addressed, and sent independently. They may take different routes and arrive out of order. TCP reassembles them perfectly.",
+        "narration": "Think of it like shipping a large painting by cutting it into puzzle pieces, mailing each separately, and reassembling on arrival. That's exactly what TCP/IP does with your data."
+      }
+    },
+    {
+      "type": "code_walkthrough",
+      "durationInFrames": 420,
+      "data": {
+        "code": "// DNS resolution in Node.js\nimport dns from 'node:dns/promises';\n\nasync function resolve(hostname) {\n  const addresses = await dns.resolve4(hostname);\n  console.log(`${hostname} → ${addresses[0]}`);\n}\n\nawait resolve('google.com');\n// google.com → 142.250.185.46",
+        "language": "JavaScript",
+        "steps": [
+          {
+            "highlightLines": [1, 2],
+            "explanation": "We import Node's built-in DNS resolver — no library needed. DNS is so fundamental it's in the standard library."
+          },
+          {
+            "highlightLines": [4, 5, 6],
+            "explanation": "We ask: 'What IP address belongs to google.com?' The OS queries a DNS server (usually your ISP's or Google's 8.8.8.8)."
+          },
+          {
+            "highlightLines": [9, 10],
+            "explanation": "The result: an IP address. '142.250.185.46' is one of Google's IPs. Your request now knows where to go."
+          }
+        ],
+        "narration": "DNS is the phone book of the Internet. It translates human-readable domain names into the IP addresses that routers actually understand. Let's see how simple it is to use."
+      }
+    },
+    {
+      "type": "concept",
+      "durationInFrames": 240,
+      "data": {
+        "heading": "TCP: the reliable postman",
+        "body": "TCP (Transmission Control Protocol) guarantees delivery. It numbers packets, detects lost ones, and requests retransmission. The tradeoff: a bit of overhead. UDP skips that — used for games and video calls where speed > perfection.",
+        "narration": "Reliability comes at a cost. TCP adds handshakes and acknowledgements — perfect for web pages. But when you're on a video call, a slightly garbled frame is better than a delayed one. That's why Zoom uses UDP, not TCP."
+      }
+    },
+    {
+      "type": "transition",
+      "durationInFrames": 120,
+      "data": {
+        "text": "The Internet: simple ideas, extraordinary scale.",
+        "narration": "Billions of devices. Millions of kilometers of fiber. Trillions of packets per day. All running on ideas from the 1970s — proof that great fundamentals last forever."
+      }
+    }
+  ]
+}

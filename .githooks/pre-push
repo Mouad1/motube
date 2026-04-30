@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# Block direct pushes to main / master.
+# Override (rare, e.g. release): git push --no-verify
+
+protected_branches="main master"
+remote="$1"
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+  for protected in $protected_branches; do
+    if [[ "$remote_ref" == "refs/heads/$protected" ]]; then
+      echo ""
+      echo "  ✋  Direct push to '$protected' on '$remote' is blocked."
+      echo "      Workflow: create a branch → open a PR → merge."
+      echo ""
+      echo "      git switch -c feat/<short-name>"
+      echo "      git push -u origin feat/<short-name>"
+      echo ""
+      echo "      Override (not recommended): git push --no-verify"
+      echo ""
+      exit 1
+    fi
+  done
+done
+
+exit 0

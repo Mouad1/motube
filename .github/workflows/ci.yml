@@ -59,9 +59,11 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
+          # Ubuntu 24.04 (noble) renamed several libs to *-t64 (time_t 64-bit ABI).
+          # chromium-browser is no longer in apt on noble (snap-only) — Remotion
+          # downloads its own Chrome Headless Shell via `npx remotion browser ensure`.
           sudo apt-get install -y \
             ffmpeg \
-            chromium-browser \
             libx11-xcb1 \
             libxcomposite1 \
             libxcursor1 \
@@ -69,45 +71,29 @@ jobs:
             libxi6 \
             libxtst6 \
             libnss3 \
-            libcups2 \
+            libcups2t64 \
             libxss1 \
             libxrandr2 \
-            libasound2 \
-            libatk1.0-0 \
+            libasound2t64 \
+            libatk1.0-0t64 \
             libpangocairo-1.0-0 \
-            libgtk-3-0
+            libgtk-3-0t64
 
       - name: Install dependencies
         run: npm ci
 
+      - name: Ensure Remotion browser
+        run: npx remotion browser ensure
+
       - name: Create sample episode DB
         run: |
           mkdir -p data output
-          node -e "
-          import('./pipeline/lib/db.js').then(({ db }) => {
-            const ep = db.episodes.create({
-              title: 'CI Sample Episode',
-              template: 'karpathy',
-            });
-            const props = {
-              title: 'CI Sample Episode',
-              scenes: [
-                { type: 'title', data: { title: 'CI Sample', subtitle: 'Automated test render' }, durationInFrames: 60 },
-                { type: 'transition', data: { text: 'Pipeline verified.' }, durationInFrames: 45 }
-              ]
-            };
-            db.episodes.update(ep.id, { props_json: JSON.stringify(props), status: 'scripted' });
-            console.log(ep.id);
-          });
-          " > /tmp/episode-id.txt
-          EPISODE_ID=$(cat /tmp/episode-id.txt | tail -1)
+          EPISODE_ID=$(npx tsx pipeline/scripts/ci-sample-episode.ts | tail -1)
           echo "EPISODE_ID=$EPISODE_ID" >> $GITHUB_ENV
 
       - name: Render sample (preview quality)
         run: |
           npx tsx pipeline/render.ts --episode-id "$EPISODE_ID" --quality preview
-        env:
-          REMOTION_CHROME_EXECUTABLE: /usr/bin/chromium-browser
 
       - name: Verify output exists
         run: |
